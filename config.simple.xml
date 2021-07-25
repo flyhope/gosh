@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Config>
+    <Main>
+        <Cmd>/usr/bin/ssh</Cmd>
+    </Main>
+
+    <Servers Name="demo">
+        <Host>$ip</Host>
+        <UserName>$username</UserName>
+        <PassWord>$password</PassWord>
+        <Port>22</Port>
+        <SshKey>~/id_rsa</SshKey>
+    </Servers>
+</Config>
