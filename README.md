@@ -2,9 +2,28 @@
 terminal ui ssh client
 
 ## Be dependent on program
-1. ssh
+1. zssh
 2. sshpass (if use auto input password)
-3. zssh (if use rz/sz)
+
+### Mac
+```bash
+brew install zssh sshpass
+```
+
+### Ubuntu
+```bash
+sudo apt install zssh sshpass 
+```
+
+### CentOS / Redhat
+```bash
+yum install zssh sshpass
+```
+
+### Windows
+
+1. Use WSL install ubuntu.
+2. Look for `ubuntu` install.
 
 ## Usage
 1. copy `config.simple.xml` to `config.xml`
@@ -12,10 +31,7 @@ terminal ui ssh client
 
 ## Support
 * [x] custom command path
-* [x] custom username
-* [x] custom port
+* [x] custom username/password/port/PrivateKey
 
 ## Todo
-* [ ] custom password
-* [ ] custom ssh private key
 * [ ] set config with ui

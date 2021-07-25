@@ -1,88 +1,116 @@
 package main
 
 import (
-	ui "github.com/gizak/termui/v3"
+	"fmt"
+	"github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"os"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
-func main()  {
-	if err := ui.Init(); err != nil {
-		log.Fatalf("failed to initialize termui: %v", err)
+func main() {
+	// init ui
+	if err := termui.Init(); err != nil {
+		logrus.Fatalf("failed to initialize termui: %v", err)
 	}
-	defer ui.Close()
+	defer termui.Close()
 
-
-
-	l := widgets.NewList()
-	l.Title = "Servers"
+	// draw server list
+	list := widgets.NewList()
+	list.Title = "Servers"
 
 	conf := LoadConfig()
-	l.Rows = make([]string, len(conf.Servers))
+	list.Rows = make([]string, len(conf.Servers))
 	for idx, server := range conf.Servers {
-		l.Rows[idx] = server.Name
+		list.Rows[idx] = fmt.Sprintf("[%d] %s", idx, server.Name)
 	}
-	l.TextStyle = ui.NewStyle(ui.ColorYellow)
-	l.WrapText = false
-	l.SetRect(0, 0, 25, 15)
-
-	ui.Render(l)
+	list.TextStyle = termui.NewStyle(termui.ColorYellow)
+	list.WrapText = false
+	list.SetRect(0, 0, 25, len(conf.Servers)+2)
+	termui.Render(list)
 
 	previousKey := ""
-	uiEvents := ui.PollEvents()
+	uiEvents := termui.PollEvents()
 	for {
 		e := <-uiEvents
 		switch e.ID {
 		case "<Enter>":
-			ui.Close()
+			termui.Close()
 
-			args := []string{"ssh"}
-			idx := l.SelectedRow
+			// fetch data
+			idx := list.SelectedRow
 			server := conf.Servers[idx]
 
-			// append arg port
-			if server.Port != 0 {
-				args = append(args, "-p", strconv.Itoa(server.Port))
+			// init shell arg
+			sshShell := ""
+			args := []string{conf.Main.Cmd, "--shell"}
+
+			// append shell password
+			if server.PassWord != "" {
+				sshShell += fmt.Sprintf("sshpass -p %s ", server.PassWord)
 			}
 
-			// append arg host
+			// append shell ssh command
 			host := server.Host
 			if server.UserName != "" {
 				host = server.UserName + "@" + host
 			}
-			args = append(args, host)
+			sshShell += fmt.Sprintf("ssh %s ", host)
 
-			err := syscall.Exec(conf.Main.Cmd, args, os.Environ())
-			if err != nil {
-				log.Errorln(err)
+			// append arg port
+			if server.Port != 0 {
+				sshShell += fmt.Sprintf("-p %d ", server.Port)
 			}
 
+			// append ssh key
+			if server.SshKey != "" {
+				sshShell += fmt.Sprintf("-i %s ", server.SshKey)
+			}
+
+			// format arg, exec
+			sshShell = strings.Trim(sshShell, " ")
+			args = append(args, sshShell)
+			err := syscall.Exec(conf.Main.Cmd, args, os.Environ())
+			if err != nil {
+				logrus.Errorln(err)
+			}
 			return
+		case  "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
+			idx, err := strconv.Atoi(e.ID)
+			if err != nil {
+				logrus.Panicln(err)
+			}
+
+			if idx < len(list.Rows) {
+				list.SelectedRow = idx
+			}
+
+
 		case "q", "<C-c>":
 			return
 		case "j", "<Down>":
-			l.ScrollDown()
+			list.ScrollDown()
 		case "k", "<Up>":
-			l.ScrollUp()
+			list.ScrollUp()
 		case "<C-d>":
-			l.ScrollHalfPageDown()
+			list.ScrollHalfPageDown()
 		case "<C-u>":
-			l.ScrollHalfPageUp()
+			list.ScrollHalfPageUp()
 		case "<C-f>":
-			l.ScrollPageDown()
+			list.ScrollPageDown()
 		case "<C-b>":
-			l.ScrollPageUp()
+			list.ScrollPageUp()
 		case "g":
 			if previousKey == "g" {
-				l.ScrollTop()
+				list.ScrollTop()
 			}
 		case "<Home>":
-			l.ScrollTop()
+			list.ScrollTop()
 		case "G", "<End>":
-			l.ScrollBottom()
+			list.ScrollBottom()
 		}
 
 		if previousKey == "g" {
@@ -91,6 +119,6 @@ func main()  {
 			previousKey = e.ID
 		}
 
-		ui.Render(l)
+		termui.Render(list)
 	}
 }
